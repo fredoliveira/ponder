@@ -1,14 +1,14 @@
-# Overlay
+# Ponder
 
 **17Lands win rates next to every card you're offered in MTG Arena, while you draft.**
 
-Overlay is a small native macOS panel that docks to the side of Arena's draft screen. Every time
+Ponder is a small native macOS panel that docks to the side of Arena's draft screen. Every time
 a pack opens, it lists that pack's cards ranked by their
 [17Lands](https://www.17lands.com) **GIH WR** (games-in-hand win rate), with card art, colours,
 rarity and a colour scale showing how far each card sits above or below the rest of the set.
 
 <p align="center">
-  <img src="docs/panel.png" width="300" alt="The Overlay panel showing a Pack 1, Pick 1 from a Premier Draft, fourteen cards ranked by GIH WR from 61.6% down to 49.5%">
+  <img src="docs/panel.png" width="300" alt="The Ponder panel showing a Pack 1, Pick 1 from a Premier Draft, fourteen cards ranked by GIH WR from 61.6% down to 49.5%">
 </p>
 
 - **Follows your draft by itself.** It reads Arena's log file as you pick, so there's nothing
@@ -18,19 +18,23 @@ rarity and a colour scale showing how far each card sits above or below the rest
 - **Hover a row to see the full card**, beside the panel on whichever side has room.
 - **Fresh numbers.** Ratings come straight from 17Lands and refresh every few hours, so a new
   set's data fills in as people play it.
-- **Read-only.** Overlay uploads nothing and needs no account or token.
+- **Read-only.** Ponder uploads nothing and needs no account or token.
+
+The name comes from [Ponder](https://scryfall.com/search?q=%21ponder), the blue spell that
+lets you look at your next cards before you commit to one. It's a sibling of
+[Recall](https://github.com/fredoliveira/recall), which is named after Ancestral Recall.
 
 ## Install
 
-1. Download `Overlay.dmg` from the [latest release](../../releases/latest) and drag Overlay to
+1. Download `Ponder.dmg` from the [latest release](../../releases/latest) and drag Ponder to
    Applications. It's signed and notarized, and runs on Apple Silicon and Intel Macs with
    macOS 14 or later.
 2. In Arena, turn on **Detailed Logs**: gear icon → Account → "Detailed Logs".
-   Without it, Arena doesn't write draft picks to its log, and Overlay has nothing to show.
-3. Open Overlay. A **GIH** item appears in the menu bar, and the panel appears next time you're
+   Without it, Arena doesn't write draft picks to its log, and Ponder has nothing to show.
+3. Open Ponder. A **GIH** item appears in the menu bar, and the panel appears next time you're
    picking a card.
 
-Start a draft in Arena, or rejoin one in progress: Overlay reads the log from the start, so it
+Start a draft in Arena, or rejoin one in progress: Ponder reads the log from the start, so it
 picks up where you are.
 
 ## Using it
@@ -45,7 +49,7 @@ The **GIH** menu-bar item has the rest:
 | Show ratings panel | Hide or show the panel without quitting |
 | Size | 100% or a more compact 80% |
 | Reset panel position | Put the panel back at its default spot |
-| Quit | Close Overlay |
+| Quit | Close Ponder |
 
 ### Reading the panel
 
@@ -60,23 +64,23 @@ The **GIH** menu-bar item has the rest:
 - **The dots** are the card's colours.
 
 Ratings are for the format you're drafting. Early in a set, Quick Draft and other formats may
-not have numbers yet. Overlay then falls back to Premier Draft and says so in orange in the
+not have numbers yet. Ponder then falls back to Premier Draft and says so in orange in the
 header.
 
 ## How it works
 
-Two small programs run together, both inside `Overlay.app`:
+Two small programs run together, both inside `Ponder.app`:
 
-- **`overlay-feed`** (Rust, in [`feed/`](feed)) follows Arena's `Player.log` using
+- **`ponder-feed`** (Rust, in [`feed/`](feed)) follows Arena's `Player.log` using
   [Recall](https://github.com/fredoliveira/recall)'s log parser and prints each pack and pick as
   a line of JSON.
-- **Overlay** (Swift and AppKit, in [`Sources/Overlay/`](Sources/Overlay)) reads those lines,
+- **Ponder** (Swift and AppKit, in [`Sources/Ponder/`](Sources/Ponder)) reads those lines,
   finds Arena's window, and draws the panel beside it as a floating window that never becomes
   active.
 
 Ratings come from 17Lands' public card-data endpoint: one request per set and format, cached
 for 3 hours. Card images come from 17Lands too. Everything is cached in
-`~/Library/Caches/mtg-overlay`.
+`~/Library/Caches/ponder`.
 
 ## Build from source
 
@@ -86,17 +90,17 @@ You'll need Xcode or the Swift toolchain (Swift 5.9+), Rust 1.88+ (via
 ```sh
 just run                      # build both programs and follow Arena's live log
 just replay <events.jsonl>    # cycle through the packs in a recorded draft
-just bundle                   # build dist/Overlay.app for this Mac
+just bundle                   # build dist/Ponder.app for this Mac
 just install                  # ...and copy it to /Applications
-just dmg                      # universal app + dist/Overlay.dmg
+just dmg                      # universal app + dist/Ponder.dmg
 ```
 
 `just replay` takes a [Recall archive](https://github.com/fredoliveira/recall#keeping-your-own-data-the-archive)
-file or saved `overlay-feed` output, which is handy for working on the panel without Arena
+file or saved `ponder-feed` output, which is handy for working on the panel without Arena
 running. To render a single pack to an image (this is how the screenshot above was made):
 
 ```sh
-.build/release/Overlay --replay <events.jsonl> --at 0 --snapshot panel.png
+.build/release/Ponder --replay <events.jsonl> --at 0 --snapshot panel.png
 ```
 
 The Recall parser is pinned to a release tag in [`feed/Cargo.toml`](feed/Cargo.toml). To try
@@ -116,11 +120,11 @@ repository secrets, listed at the top of the workflow.
 ## Credits
 
 Win rates and card images come from [17Lands](https://www.17lands.com), built on data that
-players contribute by running its client. If Overlay helps you, consider contributing your own
+players contribute by running its client. If Ponder helps you, consider contributing your own
 games with the [17Lands client](https://www.17lands.com/getting_started) or
 [Recall](https://github.com/fredoliveira/recall).
 
-Overlay is unofficial Fan Content permitted under the
+Ponder is unofficial Fan Content permitted under the
 [Wizards of the Coast Fan Content Policy](https://company.wizards.com/en/legal/fancontentpolicy).
 It is not approved or endorsed by Wizards, or affiliated with 17Lands. Portions of the materials
 used are property of Wizards of the Coast. © Wizards of the Coast LLC.

@@ -1,10 +1,10 @@
 import AppKit
 
 // Usage:
-//   Overlay                                  follow Arena's log via overlay-feed
-//   Overlay --replay <events.jsonl>          cycle through recorded packs (--interval <seconds>)
-//   Overlay --replay <file> --at <n>         show recorded pack n only
-//   ... --snapshot <out.png>                 render the panel to a PNG after a few seconds and exit
+//   Ponder                                  follow Arena's log via ponder-feed
+//   Ponder --replay <events.jsonl>          cycle through recorded packs (--interval <seconds>)
+//   Ponder --replay <file> --at <n>         show recorded pack n only
+//   ... --snapshot <out.png>                render the panel to a PNG after a few seconds and exit
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -35,7 +35,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             if replayFeed == nil { fail("no draft packs found in \(replay)") }
         } else {
             liveFeed = LiveFeed(onEvent: onEvent)
-            if liveFeed == nil { fail("overlay-feed not found; build it or set OVERLAY_FEED") }
+            if liveFeed == nil { fail("ponder-feed not found; build it or set PONDER_FEED") }
         }
 
         if let out = value("--snapshot") {
@@ -89,7 +89,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func resetPosition() { controller.resetPosition() }
 
     private func fail(_ message: String) -> Never {
-        FileHandle.standardError.write(Data("overlay: \(message)\n".utf8))
+        FileHandle.standardError.write(Data("ponder: \(message)\n".utf8))
         exit(1)
     }
 }

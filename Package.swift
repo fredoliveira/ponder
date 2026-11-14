@@ -2,9 +2,9 @@
 import PackageDescription
 
 let package = Package(
-    name: "Overlay",
+    name: "Ponder",
     platforms: [.macOS(.v14)],
     targets: [
-        .executableTarget(name: "Overlay", path: "Sources/Overlay")
+        .executableTarget(name: "Ponder", path: "Sources/Ponder")
     ]
 )

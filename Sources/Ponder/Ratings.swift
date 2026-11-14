@@ -37,7 +37,7 @@ struct RatingSet {
 enum Cache {
     static let dir: URL = {
         let base = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
-        let dir = base.appendingPathComponent("mtg-overlay")
+        let dir = base.appendingPathComponent("ponder")
         try? FileManager.default.createDirectory(
             at: dir.appendingPathComponent("img"), withIntermediateDirectories: true)
         return dir
@@ -45,7 +45,7 @@ enum Cache {
 
     static func fetch(_ url: URL) async -> Data? {
         var request = URLRequest(url: url, timeoutInterval: 20)
-        request.setValue("mtg-overlay (personal tool)", forHTTPHeaderField: "User-Agent")
+        request.setValue("Ponder (personal tool)", forHTTPHeaderField: "User-Agent")
         guard let (data, response) = try? await URLSession.shared.data(for: request),
             (response as? HTTPURLResponse)?.statusCode == 200
         else { return nil }

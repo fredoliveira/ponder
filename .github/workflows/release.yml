@@ -1,4 +1,4 @@
-# Builds, signs and notarizes the universal Overlay.dmg for a `v*` tag and publishes it as a
+# Builds, signs and notarizes the universal Ponder.dmg for a `v*` tag and publishes it as a
 # GitHub release. Run it by hand (workflow_dispatch) to get the .dmg as a build artifact only.
 #
 # Signing + notarization need six repo secrets, the same ones recall's desktop release uses:
@@ -21,7 +21,7 @@ permissions:
 
 jobs:
   release:
-    name: Overlay.dmg (macos universal)
+    name: Ponder.dmg (macos universal)
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v7
@@ -99,7 +99,7 @@ jobs:
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
         run: |
           if [ "${{ steps.signing.outputs.enabled }}" = "true" ]; then
-            export OVERLAY_SIGN_IDENTITY="$APPLE_SIGNING_IDENTITY"
+            export PONDER_SIGN_IDENTITY="$APPLE_SIGNING_IDENTITY"
           fi
           scripts/bundle.sh --universal
 
@@ -111,18 +111,18 @@ jobs:
           APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
           APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
         run: |
-          ditto -c -k --keepParent dist/Overlay.app "$RUNNER_TEMP/Overlay.zip"
-          xcrun notarytool submit "$RUNNER_TEMP/Overlay.zip" \
+          ditto -c -k --keepParent dist/Ponder.app "$RUNNER_TEMP/Ponder.zip"
+          xcrun notarytool submit "$RUNNER_TEMP/Ponder.zip" \
             --key "$RUNNER_TEMP/AuthKey.p8" --key-id "$APPLE_API_KEY" --issuer "$APPLE_API_ISSUER" \
             --wait
-          xcrun stapler staple dist/Overlay.app
+          xcrun stapler staple dist/Ponder.app
 
       - name: Build the .dmg
         env:
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
         run: |
           if [ "${{ steps.signing.outputs.enabled }}" = "true" ]; then
-            export OVERLAY_SIGN_IDENTITY="$APPLE_SIGNING_IDENTITY"
+            export PONDER_SIGN_IDENTITY="$APPLE_SIGNING_IDENTITY"
           fi
           scripts/bundle.sh --dmg-only
 
@@ -132,23 +132,23 @@ jobs:
           APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
           APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
         run: |
-          xcrun notarytool submit dist/Overlay.dmg \
+          xcrun notarytool submit dist/Ponder.dmg \
             --key "$RUNNER_TEMP/AuthKey.p8" --key-id "$APPLE_API_KEY" --issuer "$APPLE_API_ISSUER" \
             --wait
-          xcrun stapler staple dist/Overlay.dmg
+          xcrun stapler staple dist/Ponder.dmg
 
       # Prove the result on the file that ships: Gatekeeper accepts the disk image, and the
       # app inside it is validly signed, stapled and allowed to launch.
       - name: Verify the .dmg and the app inside it
         if: steps.signing.outputs.enabled == 'true'
         run: |
-          dmg=dist/Overlay.dmg
+          dmg=dist/Ponder.dmg
           xcrun stapler validate "$dmg"
           spctl --assess --type open --context context:primary-signature --verbose=4 "$dmg"
           mount="$(mktemp -d)"
           hdiutil attach "$dmg" -nobrowse -readonly -mountpoint "$mount"
           trap 'hdiutil detach "$mount" -quiet || true' EXIT
-          app="$mount/Overlay.app"
+          app="$mount/Ponder.app"
           codesign --verify --deep --strict --verbose=2 "$app"
           xcrun stapler validate "$app"
           spctl --assess --type execute --verbose=4 "$app"
@@ -162,12 +162,12 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
-          name: overlay-universal
-          path: dist/Overlay.dmg
+          name: ponder-universal
+          path: dist/Ponder.dmg
 
       - name: Publish the release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v3
         with:
-          files: dist/Overlay.dmg
+          files: dist/Ponder.dmg
           generate_release_notes: true

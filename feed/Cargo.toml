@@ -1,6 +1,6 @@
 [package]
-name = "overlay-feed"
-description = "Streams MTG Arena draft events (via recall-core) as JSON lines for the overlay app"
+name = "ponder-feed"
+description = "Streams MTG Arena draft events (via recall-core) as JSON lines for Ponder"
 version = "0.1.0"
 edition = "2024"
 

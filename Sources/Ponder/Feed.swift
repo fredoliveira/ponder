@@ -1,6 +1,6 @@
 import Foundation
 
-/// A draft event as emitted by `overlay-feed` (and by recall's archive, which shares the format).
+/// A draft event as emitted by `ponder-feed` (and by recall's archive, which shares the format).
 enum DraftEvent {
     case pack(Pack)
     case pick(pack: Int, pick: Int)
@@ -44,7 +44,7 @@ struct Pack: Equatable {
     }
 }
 
-/// Runs `overlay-feed` and delivers its events on the main queue.
+/// Runs `ponder-feed` and delivers its events on the main queue.
 final class LiveFeed {
     private let process = Process()
 
@@ -77,21 +77,21 @@ final class LiveFeed {
     private static func locate() -> URL? {
         let fm = FileManager.default
         var candidates: [URL] = []
-        if let env = ProcessInfo.processInfo.environment["OVERLAY_FEED"] {
+        if let env = ProcessInfo.processInfo.environment["PONDER_FEED"] {
             candidates.append(URL(fileURLWithPath: env))
         }
         if let exe = Bundle.main.executableURL {
-            candidates.append(exe.deletingLastPathComponent().appendingPathComponent("overlay-feed"))
+            candidates.append(exe.deletingLastPathComponent().appendingPathComponent("ponder-feed"))
         }
         candidates.append(
             URL(fileURLWithPath: fm.currentDirectoryPath)
-                .appendingPathComponent("feed/target/release/overlay-feed"))
+                .appendingPathComponent("feed/target/release/ponder-feed"))
         return candidates.first { fm.isExecutableFile(atPath: $0.path) }
     }
 }
 
 /// Test feed: steps through the packs recorded in a JSONL file (recall archive or saved
-/// `overlay-feed` output), one every `interval` seconds, or shows only pack `at` if given.
+/// `ponder-feed` output), one every `interval` seconds, or shows only pack `at` if given.
 final class ReplayFeed {
     private var timer: Timer?
 

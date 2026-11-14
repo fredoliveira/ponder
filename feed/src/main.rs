@@ -1,8 +1,8 @@
-//! overlay-feed: follows Arena's Player.log with recall-core and prints the draft events
-//! the overlay cares about as JSON lines on stdout - the same generic view recall's
+//! ponder-feed: follows Arena's Player.log with recall-core and prints the draft events
+//! Ponder cares about as JSON lines on stdout - the same generic view recall's
 //! archive writes (`{"event": "draft_pack", ...}`), so an archive file replays identically.
 //!
-//! Usage: `overlay-feed` follows the live log; `overlay-feed <LOG>` parses one file and exits.
+//! Usage: `ponder-feed` follows the live log; `ponder-feed <LOG>` parses one file and exits.
 //! Nothing is uploaded anywhere: the only service is the stdout printer.
 
 use std::io::Write;
@@ -14,7 +14,7 @@ use recall_core::paths;
 struct Printer;
 
 impl Service for Printer {
-    /// Always reports the event as delivered: the overlay keeps no checkpoint (it re-reads
+    /// Always reports the event as delivered: Ponder keeps no checkpoint (it re-reads
     /// the log from the start on every launch to restore an in-progress draft).
     fn handle(&mut self, event: &GameEvent) -> bool {
         if !matches!(
@@ -29,7 +29,7 @@ impl Service for Printer {
             line.extend(fields);
         }
         let mut out = std::io::stdout().lock();
-        // A closed pipe means the overlay quit: stop following.
+        // A closed pipe means Ponder quit: stop following.
         if writeln!(out, "{}", serde_json::Value::Object(line)).is_err() || out.flush().is_err() {
             std::process::exit(0);
         }
@@ -38,7 +38,7 @@ impl Service for Printer {
 }
 
 fn main() {
-    // Exit with the overlay: once it is gone we are re-parented and nothing reads stdout.
+    // Exit with Ponder: once it is gone we are re-parented and nothing reads stdout.
     let parent = std::os::unix::process::parent_id();
     std::thread::spawn(move || {
         loop {
@@ -61,7 +61,7 @@ fn main() {
         .filter(|f| f.exists())
         .collect();
     if current.is_empty() {
-        eprintln!("overlay-feed: no Player.log found");
+        eprintln!("ponder-feed: no Player.log found");
         std::process::exit(1);
     }
     // Reads the current log from the start (restoring an in-progress draft), then tails it.
