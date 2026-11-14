@@ -1,0 +1,103 @@
+import AppKit
+
+// Usage:
+//   Overlay                                  follow Arena's log via overlay-feed
+//   Overlay --replay <events.jsonl>          cycle through recorded packs (--interval <seconds>)
+//   Overlay --replay <file> --at <n>         show recorded pack n only
+//   ... --snapshot <out.png>                 render the panel to a PNG after a few seconds and exit
+
+@MainActor
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    private let model = DraftModel()
+    private var controller: PanelController!
+    private var liveFeed: LiveFeed?
+    private var replayFeed: ReplayFeed?
+    private var statusItem: NSStatusItem!
+
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        let args = CommandLine.arguments
+        func value(_ flag: String) -> String? {
+            args.firstIndex(of: flag).flatMap { args.indices.contains($0 + 1) ? args[$0 + 1] : nil }
+        }
+        let replay = value("--replay")
+        // --window WxH: pretend Arena's window has this size (top-left of the main screen).
+        let window = value("--window").map { $0.split(separator: "x").compactMap { Double($0) } }
+        controller = PanelController(
+            model: model, alwaysVisible: replay != nil,
+            fakeArena: window.flatMap { $0.count == 2 ? CGSize(width: $0[0], height: $0[1]) : nil })
+        if let size = value("--size").flatMap(PanelSize.init(rawValue:)) { controller.size = size }
+        let onEvent: (DraftEvent) -> Void = { [model] event in model.apply(event) }
+
+        if let replay {
+            replayFeed = ReplayFeed(
+                path: replay, interval: value("--interval").flatMap(Double.init) ?? 4,
+                at: value("--at").flatMap(Int.init), onEvent: onEvent)
+            if replayFeed == nil { fail("no draft packs found in \(replay)") }
+        } else {
+            liveFeed = LiveFeed(onEvent: onEvent)
+            if liveFeed == nil { fail("overlay-feed not found; build it or set OVERLAY_FEED") }
+        }
+
+        if let out = value("--snapshot") {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 6) { [controller] in
+                exit(controller!.snapshot(to: out) ? 0 : 1)
+            }
+        }
+        installStatusItem()
+    }
+
+    func applicationWillTerminate(_ notification: Notification) { liveFeed?.stop() }
+
+    private func installStatusItem() {
+        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        statusItem.button?.title = "GIH"
+        let menu = NSMenu()
+        let toggle = NSMenuItem(title: "Show ratings panel", action: #selector(toggle(_:)), keyEquivalent: "")
+        toggle.target = self
+        toggle.state = .on
+        menu.addItem(toggle)
+        let sizes = NSMenu()
+        for size in PanelSize.allCases {
+            let item = NSMenuItem(title: size.title, action: #selector(setSize(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = size.rawValue
+            item.state = size == controller.size ? .on : .off
+            sizes.addItem(item)
+        }
+        let sizeItem = NSMenuItem(title: "Size", action: nil, keyEquivalent: "")
+        sizeItem.submenu = sizes
+        menu.addItem(sizeItem)
+        let reset = NSMenuItem(title: "Reset panel position", action: #selector(resetPosition), keyEquivalent: "")
+        reset.target = self
+        menu.addItem(reset)
+        menu.addItem(.separator())
+        menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
+        statusItem.menu = menu
+    }
+
+    @objc private func toggle(_ item: NSMenuItem) {
+        controller.enabled.toggle()
+        item.state = controller.enabled ? .on : .off
+    }
+
+    @objc private func setSize(_ item: NSMenuItem) {
+        guard let size = (item.representedObject as? String).flatMap(PanelSize.init(rawValue:)) else { return }
+        controller.size = size
+        item.menu?.items.forEach { $0.state = $0 === item ? .on : .off }
+    }
+
+    @objc private func resetPosition() { controller.resetPosition() }
+
+    private func fail(_ message: String) -> Never {
+        FileHandle.standardError.write(Data("overlay: \(message)\n".utf8))
+        exit(1)
+    }
+}
+
+MainActor.assumeIsolated {
+    let app = NSApplication.shared
+    let delegate = AppDelegate()
+    app.delegate = delegate
+    app.setActivationPolicy(.accessory)  // menu-bar item only: no Dock icon, never takes focus
+    app.run()
+}

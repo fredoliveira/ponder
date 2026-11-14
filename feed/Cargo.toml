@@ -1,0 +1,9 @@
+[package]
+name = "overlay-feed"
+description = "Streams MTG Arena draft events (via recall-core) as JSON lines for the overlay app"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+recall-core = { git = "https://github.com/fredoliveira/recall", tag = "v0.4.0" }
+serde_json = { version = "1", features = ["preserve_order"] }

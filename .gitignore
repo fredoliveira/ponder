@@ -1,0 +1,5 @@
+.build/
+.swiftpm/
+feed/target/
+dist/
+.DS_Store

@@ -1,0 +1,173 @@
+# Builds, signs and notarizes the universal Overlay.dmg for a `v*` tag and publishes it as a
+# GitHub release. Run it by hand (workflow_dispatch) to get the .dmg as a build artifact only.
+#
+# Signing + notarization need six repo secrets, the same ones recall's desktop release uses:
+#   APPLE_CERTIFICATE           base64 of the Developer ID Application .p12
+#   APPLE_CERTIFICATE_PASSWORD  that .p12's password
+#   APPLE_SIGNING_IDENTITY      e.g. "Developer ID Application: Name (TEAMID)"
+#   APPLE_API_ISSUER            App Store Connect API issuer id
+#   APPLE_API_KEY               App Store Connect API key id
+#   APPLE_API_KEY_P8            contents of that key's AuthKey_<id>.p8
+# A tagged release refuses to ship without them; a manual run without them builds unsigned.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Overlay.dmg (macos universal)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the tag matches VERSION
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          version="$(tr -d '[:space:]' < VERSION)"
+          if [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match VERSION ($version)"
+            exit 1
+          fi
+
+      - name: Install Rust targets
+        run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: feed
+
+      - name: Check signing secrets
+        id: signing
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
+        run: |
+          missing=""
+          for name in APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_SIGNING_IDENTITY \
+            APPLE_API_ISSUER APPLE_API_KEY APPLE_API_KEY_P8; do
+            eval "value=\${$name}"
+            [ -n "$value" ] || missing="$missing $name"
+          done
+          if [ -z "$missing" ]; then
+            # notarytool wants the API key as a file.
+            umask 077
+            printf '%s\n' "$APPLE_API_KEY_P8" > "$RUNNER_TEMP/AuthKey.p8"
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          elif [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            echo "::error::Refusing to release an unsigned app. Missing secrets:$missing"
+            exit 1
+          else
+            echo "::warning::Building UNSIGNED (not notarized). Missing secrets:$missing"
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # codesign finds the certificate in a keychain, so put it in a temporary one that only
+      # this job's signing tools may use.
+      - name: Import the signing certificate
+        if: steps.signing.outputs.enabled == 'true'
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          keychain="$RUNNER_TEMP/signing.keychain-db"
+          password="$(openssl rand -hex 24)"
+          umask 077
+          printf '%s' "$APPLE_CERTIFICATE" | base64 --decode > "$RUNNER_TEMP/certificate.p12"
+          security create-keychain -p "$password" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$password" "$keychain"
+          security import "$RUNNER_TEMP/certificate.p12" -P "$APPLE_CERTIFICATE_PASSWORD" \
+            -f pkcs12 -k "$keychain" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -k "$password" "$keychain" >/dev/null
+          security list-keychains -d user -s "$keychain" login.keychain-db
+          rm -f "$RUNNER_TEMP/certificate.p12"
+
+      # Without the secrets the script finds no certificate and signs ad hoc.
+      - name: Build the universal app
+        env:
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+        run: |
+          if [ "${{ steps.signing.outputs.enabled }}" = "true" ]; then
+            export OVERLAY_SIGN_IDENTITY="$APPLE_SIGNING_IDENTITY"
+          fi
+          scripts/bundle.sh --universal
+
+      # The app is notarized and stapled before it goes into the disk image, so the copy a
+      # user drags to Applications carries its own ticket and opens offline.
+      - name: Notarize and staple the app
+        if: steps.signing.outputs.enabled == 'true'
+        env:
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+        run: |
+          ditto -c -k --keepParent dist/Overlay.app "$RUNNER_TEMP/Overlay.zip"
+          xcrun notarytool submit "$RUNNER_TEMP/Overlay.zip" \
+            --key "$RUNNER_TEMP/AuthKey.p8" --key-id "$APPLE_API_KEY" --issuer "$APPLE_API_ISSUER" \
+            --wait
+          xcrun stapler staple dist/Overlay.app
+
+      - name: Build the .dmg
+        env:
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+        run: |
+          if [ "${{ steps.signing.outputs.enabled }}" = "true" ]; then
+            export OVERLAY_SIGN_IDENTITY="$APPLE_SIGNING_IDENTITY"
+          fi
+          scripts/bundle.sh --dmg-only
+
+      - name: Notarize and staple the .dmg
+        if: steps.signing.outputs.enabled == 'true'
+        env:
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+        run: |
+          xcrun notarytool submit dist/Overlay.dmg \
+            --key "$RUNNER_TEMP/AuthKey.p8" --key-id "$APPLE_API_KEY" --issuer "$APPLE_API_ISSUER" \
+            --wait
+          xcrun stapler staple dist/Overlay.dmg
+
+      # Prove the result on the file that ships: Gatekeeper accepts the disk image, and the
+      # app inside it is validly signed, stapled and allowed to launch.
+      - name: Verify the .dmg and the app inside it
+        if: steps.signing.outputs.enabled == 'true'
+        run: |
+          dmg=dist/Overlay.dmg
+          xcrun stapler validate "$dmg"
+          spctl --assess --type open --context context:primary-signature --verbose=4 "$dmg"
+          mount="$(mktemp -d)"
+          hdiutil attach "$dmg" -nobrowse -readonly -mountpoint "$mount"
+          trap 'hdiutil detach "$mount" -quiet || true' EXIT
+          app="$mount/Overlay.app"
+          codesign --verify --deep --strict --verbose=2 "$app"
+          xcrun stapler validate "$app"
+          spctl --assess --type execute --verbose=4 "$app"
+
+      - name: Remove the API key and the signing keychain
+        if: always()
+        run: |
+          rm -f "$RUNNER_TEMP/AuthKey.p8" "$RUNNER_TEMP/certificate.p12"
+          security delete-keychain "$RUNNER_TEMP/signing.keychain-db" 2>/dev/null || true
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: overlay-universal
+          path: dist/Overlay.dmg
+
+      - name: Publish the release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/Overlay.dmg
+          generate_release_notes: true
