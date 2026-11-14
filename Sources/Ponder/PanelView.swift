@@ -50,7 +50,8 @@ struct PanelView: View {
                 }
                 Spacer()
                 if let mean = model.setMean {
-                    Text("avg \(percent(mean))").foregroundStyle(.secondary)
+                    Text([model.groupLabel, "avg \(percent(mean))"].compactMap { $0 }.joined(separator: " · "))
+                        .foregroundStyle(.secondary)
                 }
                 Text("GIH WR").foregroundStyle(.secondary)
             }

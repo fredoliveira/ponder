@@ -14,6 +14,24 @@ struct CardRating: Decodable {
     let ever_drawn_win_rate: Double?
 }
 
+/// 17Lands' player cohorts (its `user_group`), ranked by each player's own win rate.
+enum PlayerGroup: String, CaseIterable {
+    case all, top, middle, bottom
+
+    /// Menu title.
+    var title: String {
+        switch self {
+        case .all: "All players"
+        case .top: "Top players"
+        case .middle: "Middle players"
+        case .bottom: "Bottom players"
+        }
+    }
+
+    /// Header label; nil for all players, which needs none.
+    var label: String? { self == .all ? nil : rawValue.capitalized }
+}
+
 struct RatingSet {
     let byId: [Int: CardRating]
     /// Format the data is actually for (may differ from the draft's when that had no data).
@@ -53,25 +71,30 @@ enum Cache {
     }
 }
 
-/// 17Lands card ratings: one request per set and format, cached (in memory and on disk) for
-/// 3 hours. 17Lands' numbers move fast in a set's first weeks, and the app runs for days.
+/// 17Lands card ratings: one request per set, format and player group, cached (in memory and
+/// on disk) for 3 hours. 17Lands' numbers move fast in a set's first weeks, and the app runs
+/// for days.
 actor RatingsStore {
     static let shared = RatingsStore()
     private var memory: [String: (set: RatingSet, loaded: Date)] = [:]
     private let maxAge: TimeInterval = 3 * 3600
 
-    func load(set: String, format: String) async -> RatingSet? {
-        let primary = await one(set: set, format: format)
+    /// Ratings for the chosen player group, always: switching groups from pack to pack would
+    /// show the same card at very different win rates. Its cards without a win rate yet show
+    /// as unrated. Only the format falls back, for the whole set at once: formats with little
+    /// play (early Quick Draft, special events) have no win rates at all for a while.
+    func load(set: String, format: String, group: PlayerGroup) async -> RatingSet? {
+        let primary = await one(set: set, format: format, group: group)
         if let primary, primary.hasData { return primary }
-        // Formats with little play (early Quick Draft, special events) have no win rates yet.
-        if format != "PremierDraft", let fallback = await one(set: set, format: "PremierDraft") {
+        if format != "PremierDraft", let fallback = await one(set: set, format: "PremierDraft", group: group) {
             return fallback
         }
         return primary
     }
 
-    private func one(set: String, format: String) async -> RatingSet? {
-        let key = "\(set)-\(format)"
+    private func one(set: String, format: String, group: PlayerGroup) async -> RatingSet? {
+        // All players keep the original file name, so existing caches stay valid.
+        let key = "\(set)-\(format)" + (group == .all ? "" : "-\(group.rawValue)")
         if let hit = memory[key], Date().timeIntervalSince(hit.loaded) < maxAge { return hit.set }
         let file = Cache.dir.appendingPathComponent("ratings-\(key).json")
         let age = (try? file.resourceValues(forKeys: [.contentModificationDateKey]))?
@@ -90,6 +113,7 @@ actor RatingsStore {
                 URLQueryItem(name: "event_type", value: format),
                 URLQueryItem(name: "time_period", value: "ALL_TIME"),
             ]
+            if group != .all { url.queryItems?.append(URLQueryItem(name: "user_group", value: group.rawValue)) }
             if let fresh = await Cache.fetch(url.url!), decode(fresh) != nil {
                 try? fresh.write(to: file, options: .atomic)
                 data = fresh

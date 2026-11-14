@@ -31,7 +31,7 @@ lets you look at your next cards before you commit to one. It's a sibling of
    macOS 14 or later.
 2. In Arena, turn on **Detailed Logs**: gear icon → Account → "Detailed Logs".
    Without it, Arena doesn't write draft picks to its log, and Ponder has nothing to show.
-3. Open Ponder. A **GIH** item appears in the menu bar, and the panel appears next time you're
+3. Open Ponder. A two-cards icon appears in the menu bar, and the panel appears next time you're
    picking a card.
 
 Start a draft in Arena, or rejoin one in progress: Ponder reads the log from the start, so it
@@ -42,12 +42,13 @@ picks up where you are.
 The panel hangs off the right edge of Arena's window, below the draft header. Drag it anywhere
 you like: it remembers the spot relative to Arena's window, across restarts too.
 
-The **GIH** menu-bar item has the rest:
+The menu-bar icon (two angled cards) has the rest:
 
 | Menu item | What it does |
 |---|---|
 | Show ratings panel | Hide or show the panel without quitting |
 | Size | 100% or a more compact 80% |
+| Ratings from | Whose games the win rates come from: all players, or 17Lands' top, middle or bottom players |
 | Reset panel position | Put the panel back at its default spot |
 | Quit | Close Ponder |
 
@@ -63,9 +64,21 @@ The **GIH** menu-bar item has the rest:
   uncommon.
 - **The dots** are the card's colours.
 
-Ratings are for the format you're drafting. Early in a set, Quick Draft and other formats may
-not have numbers yet. Ponder then falls back to Premier Draft and says so in orange in the
-header.
+### Whose win rates
+
+By default the numbers come from every player 17Lands has data for. Under **Ratings from** you
+can instead use 17Lands' top, middle or bottom players, grouped by their own win rate. Top
+players' numbers show what a card does in strong hands, which can rank a pack quite differently.
+The header names the group in use ("Top · avg 61.6%").
+
+Ponder always sticks to the group you chose, because win rates differ a lot between groups and
+mixing them would show the same card at very different numbers from one pack to the next. The
+smaller groups take a while to fill in after a set comes out, so expect more dashes there early
+on.
+
+Ratings are for the format you're drafting, too. Formats with less play, like Quick Draft, can
+have no numbers at all for a while after release. Ponder then uses Premier Draft for the whole
+set instead, and says so in orange in the header.
 
 ## How it works
 

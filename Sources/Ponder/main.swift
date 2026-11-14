@@ -26,6 +26,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             model: model, alwaysVisible: replay != nil,
             fakeArena: window.flatMap { $0.count == 2 ? CGSize(width: $0[0], height: $0[1]) : nil })
         if let size = value("--size").flatMap(PanelSize.init(rawValue:)) { controller.size = size }
+        // --group all|top|middle|bottom: for this run only (the menu choice is what's saved).
+        if let group = value("--group").flatMap(PlayerGroup.init(rawValue:)) { model.group = group }
         let onEvent: (DraftEvent) -> Void = { [model] event in model.apply(event) }
 
         if let replay {
@@ -50,7 +52,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func installStatusItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        statusItem.button?.title = "GIH"
+        // Two angled cards: a template symbol, so macOS tints it for light and dark menu bars.
+        if let icon = NSImage(
+            systemSymbolName: "rectangle.portrait.on.rectangle.portrait.angled", accessibilityDescription: "Ponder")?
+            .withSymbolConfiguration(.init(pointSize: 14, weight: .medium))
+        {
+            statusItem.button?.image = icon
+        } else {
+            statusItem.button?.title = "GIH"
+        }
+        statusItem.button?.toolTip = "Ponder"
         let menu = NSMenu()
         let toggle = NSMenuItem(title: "Show ratings panel", action: #selector(toggle(_:)), keyEquivalent: "")
         toggle.target = self
@@ -67,6 +78,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let sizeItem = NSMenuItem(title: "Size", action: nil, keyEquivalent: "")
         sizeItem.submenu = sizes
         menu.addItem(sizeItem)
+        let groups = NSMenu()
+        for group in PlayerGroup.allCases {
+            let item = NSMenuItem(title: group.title, action: #selector(setGroup(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = group.rawValue
+            item.state = group == model.group ? .on : .off
+            groups.addItem(item)
+            if group == .all { groups.addItem(.separator()) }
+        }
+        let groupItem = NSMenuItem(title: "Ratings from", action: nil, keyEquivalent: "")
+        groupItem.submenu = groups
+        menu.addItem(groupItem)
         let reset = NSMenuItem(title: "Reset panel position", action: #selector(resetPosition), keyEquivalent: "")
         reset.target = self
         menu.addItem(reset)
@@ -83,6 +106,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func setSize(_ item: NSMenuItem) {
         guard let size = (item.representedObject as? String).flatMap(PanelSize.init(rawValue:)) else { return }
         controller.size = size
+        item.menu?.items.forEach { $0.state = $0 === item ? .on : .off }
+    }
+
+    @objc private func setGroup(_ item: NSMenuItem) {
+        guard let group = (item.representedObject as? String).flatMap(PlayerGroup.init(rawValue:)) else { return }
+        model.group = group
+        UserDefaults.standard.set(group.rawValue, forKey: "playerGroup")
         item.menu?.items.forEach { $0.state = $0 === item ? .on : .off }
     }
 
