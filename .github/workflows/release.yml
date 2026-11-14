@@ -24,7 +24,7 @@ jobs:
     name: Overlay.dmg (macos universal)
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Check the tag matches VERSION
         if: startsWith(github.ref, 'refs/tags/')
@@ -160,14 +160,14 @@ jobs:
           security delete-keychain "$RUNNER_TEMP/signing.keychain-db" 2>/dev/null || true
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: overlay-universal
           path: dist/Overlay.dmg
 
       - name: Publish the release
         if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: dist/Overlay.dmg
           generate_release_notes: true
