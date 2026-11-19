@@ -54,15 +54,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func installStatusItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        // Two angled cards: a template symbol, so macOS tints it for light and dark menu bars.
-        if let icon = NSImage(
-            systemSymbolName: "rectangle.portrait.on.rectangle.portrait.angled", accessibilityDescription: "Ponder")?
-            .withSymbolConfiguration(.init(pointSize: 14, weight: .medium))
-        {
-            statusItem.button?.image = icon
-        } else {
-            statusItem.button?.title = "GIH"
-        }
+        statusItem.button?.image = MenuIcon.make()
         statusItem.button?.toolTip = "Ponder"
         let menu = NSMenu()
         menu.delegate = self

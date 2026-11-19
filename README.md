@@ -31,7 +31,7 @@ lets you look at your next cards before you commit to one. It's a sibling of
    macOS 14 or later.
 2. In Arena, turn on **Detailed Logs**: gear icon → Account → "Detailed Logs".
    Without it, Arena doesn't write draft picks to its log, and Ponder has nothing to show.
-3. Open Ponder. A two-cards icon appears in the menu bar, and the panel appears next time you're
+3. Open Ponder. Three little moons appear in the menu bar, and the panel appears next time you're
    picking a card.
 
 Start a draft in Arena, or rejoin one in progress: Ponder reads the log from the start, so it
@@ -42,7 +42,7 @@ picks up where you are.
 The panel hangs off the right edge of Arena's window, below the draft header, and shows only
 while Arena is the active app and a pack is on screen.
 
-The menu-bar icon (two angled cards) has the rest:
+The menu-bar icon (three moons) has the rest:
 
 | Menu item | What it does |
 |---|---|
@@ -120,6 +120,11 @@ running. To render a single pack to an image (this is how the screenshot above w
 The Recall parser is pinned to a release tag in [`feed/Cargo.toml`](feed/Cargo.toml). To try
 unreleased parser changes, point it at a local checkout with
 `path = "../../recall/crates/core"` while you work, and don't commit that.
+
+The app icon is built from `icon/AppIcon.png`, a 1024px master (`icon/artwork.png` is the same
+art without the rounded mask), and the menu-bar icon is drawn in code in
+[`MenuIcon.swift`](Sources/Ponder/MenuIcon.swift) to match it: a full, a half and a crescent moon,
+a nod to the three spheres in Dan Murayama Scott's art for Ponder.
 
 `scripts/bundle.sh` signs with the first "Developer ID Application" certificate in your
 keychain, or ad hoc when there's none (fine for running locally).
