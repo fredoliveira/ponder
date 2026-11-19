@@ -122,9 +122,9 @@ unreleased parser changes, point it at a local checkout with
 `path = "../../recall/crates/core"` while you work, and don't commit that.
 
 The app icon is built from `icon/AppIcon.png`, a 1024px master (`icon/artwork.png` is the same
-art without the rounded mask), and the menu-bar icon is drawn in code in
-[`MenuIcon.swift`](Sources/Ponder/MenuIcon.swift) to match it: a full, a half and a crescent moon,
-a nod to the three spheres in Dan Murayama Scott's art for Ponder.
+art without the rounded mask): two hands holding up a half moon. The menu-bar icon is drawn in
+code in [`MenuIcon.swift`](Sources/Ponder/MenuIcon.swift): a full, a half and a crescent moon.
+Both are a nod to Dan Murayama Scott's art for Ponder, a hand reaching for three spheres.
 
 `scripts/bundle.sh` signs with the first "Developer ID Application" certificate in your
 keychain, or ad hoc when there's none (fine for running locally).

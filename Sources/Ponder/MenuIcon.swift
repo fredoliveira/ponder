@@ -1,13 +1,13 @@
 import AppKit
 
-/// The menu-bar icon: the app icon's three moons (full, half, crescent) in the same arch, drawn
-/// as a template image so macOS tints it for light and dark menu bars.
+/// The menu-bar icon: three moons (full, half, crescent) in an arch, the half one matching the
+/// app icon's moon, drawn as a template image so macOS tints it for light and dark menu bars.
 enum MenuIcon {
     static func make() -> NSImage {
         let size = NSSize(width: 26, height: 15)
         let r: CGFloat = 4.25
         let line: CGFloat = 1
-        // Centres, measured off the app icon's artwork (origin bottom-left).
+        // Centres (origin bottom-left).
         let left = NSPoint(x: 4.85, y: 4.85)
         let middle = NSPoint(x: 13, y: 10.15)
         let right = NSPoint(x: 21.15, y: 4.85)
