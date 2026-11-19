@@ -38,9 +38,12 @@ struct RatingSet {
     let format: String
     let mean: Double
     let sd: Double
+    /// When this data was fetched from 17Lands.
+    let updated: Date
 
-    init(cards: [CardRating], format: String) {
+    init(cards: [CardRating], format: String, updated: Date) {
         self.format = format
+        self.updated = updated
         byId = Dictionary(cards.compactMap { c in c.mtga_id.map { ($0, c) } }, uniquingKeysWith: { a, _ in a })
         let rates = cards.compactMap(\.ever_drawn_win_rate)
         let mean = rates.isEmpty ? 0.55 : rates.reduce(0, +) / Double(rates.count)
@@ -68,6 +71,16 @@ enum Cache {
             (response as? HTTPURLResponse)?.statusCode == 200
         else { return nil }
         return data
+    }
+
+    /// When any ratings were last fetched, judging by the cached files.
+    static func newestRatings() -> Date? {
+        let files = (try? FileManager.default.contentsOfDirectory(
+            at: dir, includingPropertiesForKeys: [.contentModificationDateKey])) ?? []
+        return files
+            .filter { $0.lastPathComponent.hasPrefix("ratings-") }
+            .compactMap { try? $0.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate }
+            .max()
     }
 }
 
@@ -102,9 +115,12 @@ actor RatingsStore {
 
         var data: Data?
         var loaded = Date()
+        // When the data itself came from 17Lands: unlike `loaded`, a stale fallback keeps its age.
+        var updated = loaded
         if let age, age < maxAge {
             data = try? Data(contentsOf: file)
             loaded = Date().addingTimeInterval(-age)  // expire with the file, not from now
+            updated = loaded
         }
         if data == nil {
             var url = URLComponents(string: "https://www.17lands.com/api/card_data")!
@@ -119,10 +135,11 @@ actor RatingsStore {
                 data = fresh
             } else {
                 data = try? Data(contentsOf: file)  // stale beats nothing
+                updated = age.map { Date().addingTimeInterval(-$0) } ?? updated
             }
         }
         guard let data, let cards = decode(data) else { return nil }
-        let result = RatingSet(cards: cards, format: format)
+        let result = RatingSet(cards: cards, format: format, updated: updated)
         memory[key] = (result, loaded)
         return result
     }

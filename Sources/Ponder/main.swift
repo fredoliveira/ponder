@@ -7,12 +7,13 @@ import AppKit
 //   ... --snapshot <out.png>                render the panel to a PNG after a few seconds and exit
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let model = DraftModel()
     private var controller: PanelController!
     private var liveFeed: LiveFeed?
     private var replayFeed: ReplayFeed?
     private var statusItem: NSStatusItem!
+    private let lastUpdate = NSMenuItem(title: "", action: nil, keyEquivalent: "")
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let args = CommandLine.arguments
@@ -63,10 +64,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         statusItem.button?.toolTip = "Ponder"
         let menu = NSMenu()
-        let toggle = NSMenuItem(title: "Show ratings panel", action: #selector(toggle(_:)), keyEquivalent: "")
-        toggle.target = self
-        toggle.state = .on
-        menu.addItem(toggle)
+        menu.delegate = self
+        lastUpdate.isEnabled = false
+        menu.addItem(lastUpdate)
+        menu.addItem(.separator())
         let sizes = NSMenu()
         for size in PanelSize.allCases {
             let item = NSMenuItem(title: size.title, action: #selector(setSize(_:)), keyEquivalent: "")
@@ -90,17 +91,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let groupItem = NSMenuItem(title: "Ratings from", action: nil, keyEquivalent: "")
         groupItem.submenu = groups
         menu.addItem(groupItem)
-        let reset = NSMenuItem(title: "Reset panel position", action: #selector(resetPosition), keyEquivalent: "")
-        reset.target = self
-        menu.addItem(reset)
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
         statusItem.menu = menu
     }
 
-    @objc private func toggle(_ item: NSMenuItem) {
-        controller.enabled.toggle()
-        item.state = controller.enabled ? .on : .off
+    func menuWillOpen(_ menu: NSMenu) {
+        lastUpdate.title = "Last update: " + Self.ago(model.ratingsUpdated ?? Cache.newestRatings())
+    }
+
+    /// "5 minutes ago", "2 hours ago", ...
+    private static func ago(_ date: Date?) -> String {
+        guard let date else { return "never" }
+        let seconds = Date().timeIntervalSince(date)
+        if seconds < 60 { return "just now" }
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .full
+        return formatter.localizedString(fromTimeInterval: -seconds)
     }
 
     @objc private func setSize(_ item: NSMenuItem) {
@@ -115,8 +122,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         UserDefaults.standard.set(group.rawValue, forKey: "playerGroup")
         item.menu?.items.forEach { $0.state = $0 === item ? .on : .off }
     }
-
-    @objc private func resetPosition() { controller.resetPosition() }
 
     private func fail(_ message: String) -> Never {
         FileHandle.standardError.write(Data("ponder: \(message)\n".utf8))

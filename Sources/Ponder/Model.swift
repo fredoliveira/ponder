@@ -16,7 +16,8 @@ final class DraftModel: ObservableObject {
     @Published private(set) var ratingsNote: String?
     /// The player group the shown ratings are for, when it isn't all players.
     @Published private(set) var groupLabel: String?
-    @Published private(set) var setMean: Double?
+    /// When the most recently loaded ratings were fetched from 17Lands (kept after a draft ends).
+    private(set) var ratingsUpdated: Date?
     /// Whose ratings to show; changing it redraws the current pack.
     var group = PlayerGroup(rawValue: UserDefaults.standard.string(forKey: "playerGroup") ?? "") ?? .all {
         didSet {
@@ -78,7 +79,7 @@ final class DraftModel: ObservableObject {
         hovered = nil
         ratingsNote = note
         groupLabel = group.label
-        setMean = ratings?.hasData == true ? ratings?.mean : nil
+        if let updated = ratings?.updated { ratingsUpdated = updated }
         pack = target
         loadedGroup = group
         rows = sorted.enumerated().map { index, entry in

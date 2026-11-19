@@ -45,23 +45,16 @@ final class PanelController {
             update()
         }
     }
-    /// User toggle from the menu-bar item.
-    var enabled = true { didSet { update() } }
-
-    /// How far the user has dragged the panel's top-right corner from its default spot.
-    private var drag: CGPoint
-    private var lastSetOrigin: CGPoint?
-    private var lastCorner: CGPoint?
 
     init(model: DraftModel, alwaysVisible: Bool, fakeArena: CGSize? = nil) {
         self.model = model
         self.alwaysVisible = alwaysVisible
         self.fakeArena = fakeArena
-        let saved = UserDefaults.standard
-        drag = CGPoint(x: saved.double(forKey: "dragX"), y: saved.double(forKey: "dragY"))
+        // The panel used to be draggable; forget any offset saved back then.
+        UserDefaults.standard.removeObject(forKey: "dragX")
+        UserDefaults.standard.removeObject(forKey: "dragY")
 
         panel = Self.makePanel()
-        panel.isMovableByWindowBackground = true
         let host = HoverHostingView(rootView: PanelView(model: model))
         panel.contentView = host
 
@@ -98,51 +91,30 @@ final class PanelController {
 
     /// Called when the pack changes and, while a pack is showing, twice a second.
     private func update() {
-        let anchor = enabled && !model.rows.isEmpty ? anchorRect() : nil
+        let anchor = model.rows.isEmpty ? nil : anchorRect()
         guard let anchor else {
             panel.orderOut(nil)
             preview.orderOut(nil)
             // Keep checking only while there is a pack that could become visible again.
-            setPolling(enabled && !model.rows.isEmpty)
-            lastSetOrigin = nil
+            setPolling(!model.rows.isEmpty)
             return
         }
         setPolling(true)
 
-        // If the panel isn't where we last put it, the user dragged it: remember that.
-        if panel.isVisible, let last = lastSetOrigin, let previous = lastCorner,
-            abs(panel.frame.minX - last.x) > 2 || abs(panel.frame.minY - last.y) > 2
-        {
-            drag = CGPoint(x: panel.frame.maxX - previous.x, y: panel.frame.maxY - previous.y)
-            UserDefaults.standard.set(drag.x, forKey: "dragX")
-            UserDefaults.standard.set(drag.y, forKey: "dragY")
-        }
-
         // Hang the panel from a point near Arena's top-right corner, below the draft
-        // screen's header row (plus wherever the user dragged it).
+        // screen's header row.
         let corner = CGPoint(x: anchor.maxX - 8, y: anchor.maxY - anchor.height * 0.16)
         let layout = PanelLayout(scale: size.scale)
         if model.layout != layout { model.layout = layout }
         let size = CGSize(width: layout.width, height: layout.height(rows: model.rows.count))
-        var origin = CGPoint(x: corner.x + drag.x - size.width, y: corner.y + drag.y - size.height)
+        var origin = CGPoint(x: corner.x - size.width, y: corner.y - size.height)
         if let screen = NSScreen.screens.first(where: { $0.frame.intersects(anchor) }) ?? NSScreen.main {
             origin.x = min(max(origin.x, screen.frame.minX), screen.frame.maxX - size.width)
             origin.y = min(max(origin.y, screen.frame.minY), screen.frame.maxY - size.height)
         }
         let frame = CGRect(origin: origin, size: size)
         if panel.frame != frame { panel.setFrame(frame, display: true) }
-        lastSetOrigin = frame.origin
-        lastCorner = corner
         if !panel.isVisible { panel.orderFrontRegardless() }
-    }
-
-    /// Forget any drag and return to the default spot at Arena's right edge.
-    func resetPosition() {
-        drag = .zero
-        UserDefaults.standard.removeObject(forKey: "dragX")
-        UserDefaults.standard.removeObject(forKey: "dragY")
-        lastSetOrigin = nil
-        update()
     }
 
     private func setPolling(_ on: Bool) {

@@ -49,11 +49,8 @@ struct PanelView: View {
                     Text(note).foregroundStyle(.orange).lineLimit(1)
                 }
                 Spacer()
-                if let mean = model.setMean {
-                    Text([model.groupLabel, "avg \(percent(mean))"].compactMap { $0 }.joined(separator: " · "))
-                        .foregroundStyle(.secondary)
-                }
-                Text("GIH WR").foregroundStyle(.secondary)
+                Text([model.groupLabel, "GIH WR"].compactMap { $0 }.joined(separator: " · "))
+                    .foregroundStyle(.secondary)
             }
         }
         .font(.system(size: 11 * model.layout.scale))

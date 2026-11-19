@@ -39,24 +39,23 @@ picks up where you are.
 
 ## Using it
 
-The panel hangs off the right edge of Arena's window, below the draft header. Drag it anywhere
-you like: it remembers the spot relative to Arena's window, across restarts too.
+The panel hangs off the right edge of Arena's window, below the draft header, and shows only
+while Arena is the active app and a pack is on screen.
 
 The menu-bar icon (two angled cards) has the rest:
 
 | Menu item | What it does |
 |---|---|
-| Show ratings panel | Hide or show the panel without quitting |
+| Last update | How long ago the ratings were fetched from 17Lands (they refresh every 3 hours) |
 | Size | 100% or a more compact 80% |
 | Ratings from | Whose games the win rates come from: all players, or 17Lands' top, middle or bottom players |
-| Reset panel position | Put the panel back at its default spot |
 | Quit | Close Ponder |
 
 ### Reading the panel
 
 - **The big number** is the card's GIH WR: how often decks won games in which the card was
   drawn or in the opening hand. A dash means 17Lands doesn't have enough games yet.
-- **Its colour** shows how the card compares with the set's average (shown in the header):
+- **Its colour** shows how the card compares with the set's average:
   bright green for standouts, light green for above average, white for average, then orange and
   red below. The bands are in standard deviations from the set mean, so they mean the same thing
   in every set.
@@ -69,7 +68,7 @@ The menu-bar icon (two angled cards) has the rest:
 By default the numbers come from every player 17Lands has data for. Under **Ratings from** you
 can instead use 17Lands' top, middle or bottom players, grouped by their own win rate. Top
 players' numbers show what a card does in strong hands, which can rank a pack quite differently.
-The header names the group in use ("Top · avg 61.6%").
+The header names the group in use ("Top · GIH WR").
 
 Ponder always sticks to the group you chose, because win rates differ a lot between groups and
 mixing them would show the same card at very different numbers from one pack to the next. The
