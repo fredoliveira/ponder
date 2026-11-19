@@ -28,8 +28,14 @@ enum PlayerGroup: String, CaseIterable {
         }
     }
 
-    /// Header label; nil for all players, which needs none.
-    var label: String? { self == .all ? nil : rawValue.capitalized }
+    /// Short label for the panel header.
+    var label: String { rawValue.capitalized }
+
+    /// The group after this one, for cycling through them from the panel header.
+    var next: PlayerGroup {
+        let all = Self.allCases
+        return all[(all.firstIndex(of: self)! + 1) % all.count]
+    }
 }
 
 struct RatingSet {

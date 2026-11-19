@@ -14,26 +14,32 @@ final class DraftModel: ObservableObject {
     @Published private(set) var rows: [Row] = []
     /// Format the ratings are for, when it differs from the draft's own.
     @Published private(set) var ratingsNote: String?
-    /// The player group the shown ratings are for, when it isn't all players.
-    @Published private(set) var groupLabel: String?
     /// When the most recently loaded ratings were fetched from 17Lands (kept after a draft ends).
     private(set) var ratingsUpdated: Date?
-    /// Whose ratings to show; changing it redraws the current pack.
-    var group = PlayerGroup(rawValue: UserDefaults.standard.string(forKey: "playerGroup") ?? "") ?? .all {
+    /// Whose ratings to show; changing it redraws the current pack. Setting it directly lasts
+    /// for this run only: `choose(_:)` also saves it.
+    @Published var group = PlayerGroup(rawValue: UserDefaults.standard.string(forKey: "playerGroup") ?? "") ?? .all {
         didSet {
             guard group != oldValue else { return }
             refreshTask?.cancel()
             refreshTask = Task { [weak self] in await self?.refresh() }
         }
     }
-    /// The group the shown rows were loaded for.
-    private var loadedGroup: PlayerGroup?
+    /// The group the shown rows were loaded for (lags `group` while its ratings load).
+    @Published private(set) var loadedGroup: PlayerGroup?
     @Published var hovered: Int?
+    @Published var headerHovered = false
     /// Set by the panel controller to fit the space beside Arena's pack grid.
     @Published var layout = PanelLayout()
 
     private var pending: Pack?
     private var refreshTask: Task<Void, Never>?
+
+    /// Switch to `group` and remember it across launches.
+    func choose(_ group: PlayerGroup) {
+        self.group = group
+        UserDefaults.standard.set(group.rawValue, forKey: "playerGroup")
+    }
 
     func apply(_ event: DraftEvent) {
         switch event {
@@ -78,7 +84,6 @@ final class DraftModel: ObservableObject {
             }
         hovered = nil
         ratingsNote = note
-        groupLabel = group.label
         if let updated = ratings?.updated { ratingsUpdated = updated }
         pack = target
         loadedGroup = group

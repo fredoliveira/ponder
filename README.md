@@ -48,7 +48,7 @@ The menu-bar icon (two angled cards) has the rest:
 |---|---|
 | Last update | How long ago the ratings were fetched from 17Lands (they refresh every 3 hours) |
 | Size | 100% or a more compact 80% |
-| Ratings from | Whose games the win rates come from: all players, or 17Lands' top, middle or bottom players |
+| Ratings from | Whose games the win rates come from: all players, or 17Lands' top, middle or bottom players (also switchable from the panel header) |
 | Quit | Close Ponder |
 
 ### Reading the panel
@@ -65,10 +65,12 @@ The menu-bar icon (two angled cards) has the rest:
 
 ### Whose win rates
 
-By default the numbers come from every player 17Lands has data for. Under **Ratings from** you
-can instead use 17Lands' top, middle or bottom players, grouped by their own win rate. Top
+By default the numbers come from every player 17Lands has data for. You can instead use 17Lands'
+top, middle or bottom players, grouped by their own win rate: click the panel's header to cycle
+All → Top → Middle → Bottom, or pick one under **Ratings from** in the menu. Top
 players' numbers show what a card does in strong hands, which can rank a pack quite differently.
-The header names the group in use ("Top · GIH WR").
+The header shows the group in use; it is dimmed for a moment while that group's numbers load,
+and Ponder remembers your choice.
 
 Ponder always sticks to the group you chose, because win rates differ a lot between groups and
 mixing them would show the same card at very different numbers from one pack to the next. The

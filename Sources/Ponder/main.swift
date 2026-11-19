@@ -14,6 +14,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var replayFeed: ReplayFeed?
     private var statusItem: NSStatusItem!
     private let lastUpdate = NSMenuItem(title: "", action: nil, keyEquivalent: "")
+    private let groups = NSMenu()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let args = CommandLine.arguments
@@ -79,12 +80,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let sizeItem = NSMenuItem(title: "Size", action: nil, keyEquivalent: "")
         sizeItem.submenu = sizes
         menu.addItem(sizeItem)
-        let groups = NSMenu()
         for group in PlayerGroup.allCases {
             let item = NSMenuItem(title: group.title, action: #selector(setGroup(_:)), keyEquivalent: "")
             item.target = self
             item.representedObject = group.rawValue
-            item.state = group == model.group ? .on : .off
             groups.addItem(item)
             if group == .all { groups.addItem(.separator()) }
         }
@@ -98,6 +97,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     func menuWillOpen(_ menu: NSMenu) {
         lastUpdate.title = "Last update: " + Self.ago(model.ratingsUpdated ?? Cache.newestRatings())
+        // The group can also change from the panel header.
+        for item in groups.items where item.representedObject != nil {
+            item.state = item.representedObject as? String == model.group.rawValue ? .on : .off
+        }
     }
 
     /// "5 minutes ago", "2 hours ago", ...
@@ -118,9 +121,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     @objc private func setGroup(_ item: NSMenuItem) {
         guard let group = (item.representedObject as? String).flatMap(PlayerGroup.init(rawValue:)) else { return }
-        model.group = group
-        UserDefaults.standard.set(group.rawValue, forKey: "playerGroup")
-        item.menu?.items.forEach { $0.state = $0 === item ? .on : .off }
+        model.choose(group)
     }
 
     private func fail(_ message: String) -> Never {

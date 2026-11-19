@@ -2,9 +2,11 @@ import AppKit
 import Combine
 import SwiftUI
 
-/// Hosting view that reports which row the pointer is over, even while Arena is the active app.
+/// Hosting view that reports which row the pointer is over and clicks on the header, even while
+/// Arena is the active app. The panel has no SwiftUI controls, so it takes every click itself.
 final class HoverHostingView: NSHostingView<PanelView> {
-    var onHover: ((Int?) -> Void)?
+    var onHover: ((_ row: Int?, _ header: Bool) -> Void)?
+    var onHeaderClick: (() -> Void)?
 
     override func updateTrackingAreas() {
         super.updateTrackingAreas()
@@ -15,15 +17,30 @@ final class HoverHostingView: NSHostingView<PanelView> {
                 owner: self))
     }
 
-    override func mouseMoved(with event: NSEvent) {
+    /// Distance from the top of the panel, and whether that is in the header.
+    private func locate(_ event: NSEvent) -> (fromTop: CGFloat, header: Bool) {
         let point = convert(event.locationInWindow, from: nil)
         let fromTop = isFlipped ? point.y : bounds.height - point.y
-        let layout = rootView.model.layout
-        let index = Int(floor((fromTop - layout.header) / layout.row))
-        onHover?(fromTop >= layout.header && index >= 0 ? index : nil)
+        return (fromTop, fromTop >= 0 && fromTop < rootView.model.layout.header)
     }
 
-    override func mouseExited(with event: NSEvent) { onHover?(nil) }
+    override func mouseMoved(with event: NSEvent) {
+        let (fromTop, header) = locate(event)
+        let layout = rootView.model.layout
+        let index = Int(floor((fromTop - layout.header) / layout.row))
+        onHover?(fromTop >= layout.header && index >= 0 ? index : nil, header)
+    }
+
+    override func mouseExited(with event: NSEvent) { onHover?(nil, false) }
+
+    // Clicks land here rather than on SwiftUI's internal views, and count even though the
+    // panel never becomes key (Arena stays the active app).
+    override func hitTest(_ point: NSPoint) -> NSView? { frame.contains(point) ? self : nil }
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
+    override func mouseDown(with event: NSEvent) {
+        if locate(event).header { onHeaderClick?() }
+    }
 }
 
 @MainActor
@@ -66,7 +83,14 @@ final class PanelController {
         previewImage.layer?.masksToBounds = true
         preview.contentView = previewImage
 
-        host.onHover = { [weak self] index in self?.hover(index) }
+        host.onHover = { [weak self] index, header in
+            self?.hover(index)
+            if self?.model.headerHovered != header { self?.model.headerHovered = header }
+        }
+        host.onHeaderClick = { [weak model] in
+            guard let model else { return }
+            model.choose(model.group.next)
+        }
         model.$rows
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in self?.update() }

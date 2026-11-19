@@ -49,13 +49,30 @@ struct PanelView: View {
                     Text(note).foregroundStyle(.orange).lineLimit(1)
                 }
                 Spacer()
-                Text([model.groupLabel, "GIH WR"].compactMap { $0 }.joined(separator: " · "))
-                    .foregroundStyle(.secondary)
+                groupControl
+                Text("GIH WR").foregroundStyle(.secondary)
             }
         }
         .font(.system(size: 11 * model.layout.scale))
         .lineLimit(1)
         .padding(.horizontal, 10 * model.layout.scale)
+    }
+
+    /// Whose ratings these are. Clicking anywhere on the header cycles to the next group (the
+    /// panel controller handles the click); this pill shows that the header is a control.
+    private var groupControl: some View {
+        let scale = model.layout.scale
+        let hovered = model.headerHovered
+        return HStack(spacing: 3 * scale) {
+            Text(model.group.label)
+            Image(systemName: "chevron.up.chevron.down").font(.system(size: 7 * scale, weight: .bold))
+        }
+        .foregroundStyle(hovered ? .primary : .secondary)
+        // Dimmed until the new group's ratings are in, so the numbers never claim the wrong group.
+        .opacity(model.loadedGroup == model.group ? 1 : 0.45)
+        .padding(.horizontal, 6 * scale)
+        .padding(.vertical, 2 * scale)
+        .background(RoundedRectangle(cornerRadius: 4 * scale).fill(.white.opacity(hovered ? 0.14 : 0.07)))
     }
 }
 
