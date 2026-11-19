@@ -26,7 +26,13 @@ lets you look at your next cards before you commit to one. It's a sibling of
 
 ## Install
 
-1. Download `Ponder.dmg` from the [latest release](../../releases/latest) and drag Ponder to
+1. Install with Homebrew:
+
+   ```sh
+   brew install --cask fredoliveira/tap/ponder
+   ```
+
+   or download `Ponder.dmg` from the [latest release](../../releases/latest) and drag Ponder to
    Applications. It's signed and notarized, and runs on Apple Silicon and Intel Macs with
    macOS 14 or later.
 2. In Arena, turn on **Detailed Logs**: gear icon → Account → "Detailed Logs".
